@@ -208,11 +208,13 @@ for fb in range(nfreq):
             #print("mean_free: %.2f " % mean_free,", intri_b %.2f " %  intrinsic_b,
             #      "mean(Eobs): %.2e" % np.mean(Eobs_temp[nfree][nb]),"mean(Esyn): %.2e" % np.mean(Esyn_temp[nfree][nb]),
             #      "crap %.2f" % crap, "res_max %.2f" % res_max)
-
-            plot_fitting_curves(nfree,y,msv_mean[aa][0][:],Eobs_temp[nfree],Esyn_temp[nfree],fname[aa])
+            
+            ### --- plotting the Eobs and Esyn curves --> will take time to plot all out
+            #plot_fitting_curves(nfree,y,msv_mean[aa][0][:],Eobs_temp[nfree],Esyn_temp[nfree],fname[aa])
         #print("mean_free: %.2f " % mean_free,", intrinsic_b %.2f " %  intrinsic_b,"SSR: %.4f" % SSR_temp)
         SSR_final= SSR_final / (np.min(SSR_final[:][:]))
     SSR[fb]=SSR_final
 
 ## optimal fit
 plot_grid_searching(freq,SSR)
+

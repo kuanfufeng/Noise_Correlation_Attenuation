@@ -63,7 +63,7 @@ def plot_envelope(comp_arr,freq,msv,msv_mean,fname,vdist):
     plt.show()       
 
 ## plot fitting curves
-def plot_fitting_curves(mean_free,intrinsic_b,tt,Eobs,Esyn,fname):
+def plot_fitting_curves(mean_free,intrinsic_b,tt,Eobs,Esyn,fname,dist):
     numb=len(intrinsic_b)
     plt.figure(figsize=(8,2))
     for nb in range(numb):
@@ -74,10 +74,41 @@ def plot_fitting_curves(mean_free,intrinsic_b,tt,Eobs,Esyn,fname):
         plt.plot( tt, Eobs[nb], "k-", linewidth=0.5)
         plt.plot( tt, Esyn[nb], "b-", linewidth=1)
 
-    plt.title("%s     @%4.2f-%4.2f Hz, mean_free: %.2f  b: %.2f~%.2f"
-            % ( fname,fmin,fmax,mean_free,y[0],y[-1]))
+    plt.title("%s  %.2fkm   @%4.2f-%4.2f Hz, mean_free: %.2f  b: %.2f~%.2f"
+            % ( fname,dist,fmin,fmax,mean_free,y[0],y[-1]))
     plt.xlabel("Time [s]")
     plt.ylabel("Energy density Amplitude")
 
 ## plot grid-searching results
+def plot_grid_searching(freq,SSR):
+    nfreq=len(freq)-1
+    
+    fig, ax = plt.subplots(1,nfreq, figsize=(16,4), sharex=False)
+    
+    for fb in range(nfreq): 
+        fmin=freq[fb]
+        fmax=freq[fb+1]
+
+        loc=np.where(SSR[fb].T == np.amin(SSR[fb].T))
+        locx=list(zip(loc[0], loc[1]))
+        print("%4.2f-%4.2f Hz " % (fmin,fmax),"loc ",loc)
+        ymin=y[loc[0]]
+        xmin=x[loc[1]]
+        print(" intrinsic_b %.2f " % ymin,"mean_free: %.2f " % xmin)
+
+        grid = SSR[fb].T
+        im=ax[fb].imshow(grid,extent=(x.min(), x.max(), y.max(), y.min()), aspect='auto',cmap = 'viridis_r',interpolation='spline16' )
+        #im=ax[fb].imshow(grid,aspect='auto',cmap = 'viridis_r' )
+        im.set_clim(1,3)    
+        cb=plt.colorbar(im,extend='max')
+        cb.set_label('SSR/SSR_min', rotation=90, labelpad=14)
+        ax[fb].set_title("All pairs SSR  @%4.2f-%4.2f Hz" % (fmin,fmax) )
+        ax[fb].set_xlabel("mean free path")
+        ax[fb].set_ylabel("intrinsic_b")
+        ax[fb].invert_yaxis()
+        ax[fb].plot(xmin,ymin,"+", markersize=20, color='red')
+
+    plt.tight_layout() 
+    plt.show()     
+    
 
