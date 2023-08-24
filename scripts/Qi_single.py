@@ -148,7 +148,6 @@ Eobs_temp=np.ndarray((len(x),len(y),npts//2+1))
 SSR_temppp=np.ndarray((len(x),len(y),len(twindow)))
 
 SSR_final=np.ndarray((len(x),len(y)))
-SSR_final[:][:]=0.
 
 SSR=np.ndarray((nfreq,len(x),len(y)))
 SSR[:][:][:]=0.
@@ -157,6 +156,7 @@ for fb in range(nfreq):
     fmin=freq[fb]
     fmax=freq[fb+1]
     c=cvel[fb]
+    SSR_final[:][:]=0.
     for aa in range(fnum):
         r=float(vdist[aa]) 
 
