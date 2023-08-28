@@ -89,8 +89,32 @@ def ESYN_RadiaTrans_intersta(mean_free,tm, r, c):
         return Esyn
 
 ### -----
+def convertTuple(tup):
+    # initialize an empty string
+    str = ''
+    for item in tup:
+        str = str + item
+    return str
 
 ### -----
+def mad(arr):
+    """
+    From Noisepy-seis.noise_module
+    Median Absolute Deviation: MAD = median(|Xi- median(X)|)
+    PARAMETERS:
+    -------------------
+    arr: numpy.ndarray, seismic trace data array
+    RETURNS:
+    data: Median Absolute Deviation of data
+    """
+    if not np.ma.is_masked(arr):
+        med = np.median(arr)
+        data = np.median(np.abs(arr - med))
+    else:
+        med = np.ma.median(arr)
+        data = np.ma.median(np.ma.abs(arr - med))
+    return data
+
 ### -----
 ### -----
 ### -----

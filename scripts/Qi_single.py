@@ -5,7 +5,7 @@ import obspy
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-from Esyn_utils import *
+from Esyn_func import *
 from plotting import *
 import scipy
 import math
@@ -94,6 +94,10 @@ msv_mean[:][:][:]=0.
 data_sym=np.ndarray((nfreq,indx+1)) # two-side averaged stack CF
 fmsv_mean=np.ndarray((fnum,nfreq+1,indx+1))
 
+level=np.ndarray((fnum,nfreq,1))
+ratio=3
+twinbe=np.ndarray((fnum,nfreq,2))
+
 for aa in range(fnum):
     for ncmp in  range(len(comp_arr)):
         ccomp=comp_arr[ncmp]
@@ -128,24 +132,30 @@ for aa in range(fnum):
         # --- fold
         sym = 0.5 * msv_mean[aa][fb+1][indx:] + 0.5 * np.flip(msv_mean[aa][fb+1][: indx + 1], axis=0)
         data_sym[fb]=sym
+        Val_mad=mad(sym)
+        level[aa][fb]=Val_mad*ratio
+        
+        for pt in range(len(sym)):
+            if (sym[pt] < float(level[aa][fb])):
+                twinbe[aa][fb][0]=int((1/fmin)*5)
+                twinbe[aa][fb][1]=int(msv[aa][0][0][indx+pt])
+                print(aa,fb,pt,sym[pt],level[aa][fb],twinbe[aa][fb])
+                break
+
     fmsv_mean[aa]=[msv[aa][0][0][indx:],data_sym[0],data_sym[1],data_sym[2]]
     # -- plot
     plot_envelope(comp_arr,freq,msv[aa],msv_mean[aa],fname[aa],vdist[aa])
-    plot_fmsv_waveforms(freq,fmsv_mean[aa],fname[aa])
-
+    plot_fmsv_waveforms(freq,fmsv_mean[aa],fname[aa],level[aa],twinbe[aa])
 
 # --- measuring coda window
-twindow=[5,6,7,14,15,16]
 cvel=[2.6, 2.0, 1.8]  
 # phase velocity --> should be vary
 
-x=np.zeros(2)  # mean_free_path search array
+x=np.zeros(1)  # mean_free_path search array
 y=np.zeros(30)  # intrinsic_b search array
 
 Esyn_temp=np.ndarray((len(x),len(y),npts//2+1))
 Eobs_temp=np.ndarray((len(x),len(y),npts//2+1))
-
-SSR_temppp=np.ndarray((len(x),len(y),len(twindow)))
 
 SSR_final=np.ndarray((len(x),len(y)))
 
@@ -158,7 +168,10 @@ for fb in range(nfreq):
     c=cvel[fb]
     SSR_final[:][:]=0.
     for aa in range(fnum):
-        r=float(vdist[aa]) 
+        r=0. #float(vdist[aa]) 
+        twindow=[]
+        twindow=range(int(twinbe[aa][fb][0]),int(twinbe[aa][fb][1]),1)
+        SSR_temppp=np.ndarray((len(x),len(y),len(twindow)))
 
         # grid search in combination of mean_free_path and intrinsic_b
         Esyn_temp[:][:][:]=0.
@@ -205,8 +218,8 @@ for fb in range(nfreq):
                 SSR_final[nfree][nb]+=SSR_temp
             #print("mean_free: %.2f " % mean_free,", intri_b %.2f " %  intrinsic_b,
             #      "mean(Eobs): %.2e" % np.mean(Eobs_temp[nfree][nb]),"mean(Esyn): %.2e" % np.mean(Esyn_temp[nfree][nb]),
-
-            plot_fitting_curves(mean_free,y,fmsv_mean[aa][0][:],Eobs_temp[nfree],Esyn_temp[nfree],fname[aa],vdist[aa],twindow,fmin,fmax)
+# --- takes time to plot all fitting figures (suggested marked except for checking)
+            #plot_fitting_curves(mean_free,y,fmsv_mean[aa][0][:],Eobs_temp[nfree],Esyn_temp[nfree],fname[aa],vdist[aa],twindow,fmin,fmax)
         SSR_final= SSR_final / (np.min(SSR_final[:][:]))
     SSR[fb]=SSR_final
 
@@ -248,7 +261,7 @@ for fb in range(nfreq):
     crap=np.mean(temppp)
     Esyn[fb]*=(10**crap)
     plot_fitting_result(result_mfp[fb],result_intb[fb],fmsv_mean[aa][0][:],
-                        Eobs[fb],Esyn[fb],sta_pair,vdist[aa],twindow,fmin,fmax)
+                        Eobs[fb],Esyn[fb],sta_pair,vdist[aa],twinbe[aa][fb],fmin,fmax)
 #plot_grid_searching(sta_pair,freq,SSR,x,y)
 
 # --- move figures to dics
