@@ -135,11 +135,15 @@ for aa in range(fnum):
         Val_mad=mad(sym)
         level[aa][fb]=Val_mad*ratio
         
+        twinbe[aa][fb][0]=int((1/fmin)*4)
         for pt in range(len(sym)):
             if (sym[pt] < float(level[aa][fb])):
-                twinbe[aa][fb][0]=int((1/fmin)*5)
                 twinbe[aa][fb][1]=int(msv[aa][0][0][indx+pt])
                 print(aa,fb,pt,sym[pt],level[aa][fb],twinbe[aa][fb])
+                break
+            if ( pt >= int((twinbe[aa][fb][0]+(1/fmin)*20)/dt)):
+                twinbe[aa][fb][1]=twinbe[aa][fb][0]+int((1/fmin)*20)
+                print("*20 times criteria ",aa,fb,pt,sym[pt],level[aa][fb],twinbe[aa][fb])
                 break
 
     fmsv_mean[aa]=[msv[aa][0][0][indx:],data_sym[0],data_sym[1],data_sym[2]]
