@@ -87,22 +87,20 @@ def ESYN_RadiaTrans_onesta(mean_free: float, tm: float, r: float, c: float) -> f
         Esyn:   The synthetic energy density
     ----------------------------------------------
     """
-    r = r + 0.00000001  # to avoid the a2bot becomes zero
     s0 = c**2 * tm**2 - r**2
-    if s0 > 0:
-        # second term
-        ind2 = mean_free ** (-1) * (math.sqrt(s0) - c * tm)
-        a2up = math.exp(ind2)
-        a2bot = 2 * math.pi * mean_free * math.sqrt(s0)
-        second = (a2up / a2bot) * step(tm - r / c)
-        Esyn = second
+    check_s0(s0)
 
-        return Esyn
-    if s0 <= 0:
-        raise ValueError(
-            f"Considering the single-station measurement, there is no chance of c**2 * tm**2 - r**2  == {s0} <=0."
-        )
+    const = 0.00000001
+    r = r + const  # to avoid the a2bot becomes zero
 
+    # second term
+    ind2 = mean_free ** (-1) * (math.sqrt(s0) - c * tm)
+    a2up = math.exp(ind2)
+    a2bot = 2 * math.pi * mean_free * math.sqrt(s0)
+    second = (a2up / a2bot) * step(tm - r / c)
+    Esyn = second
+
+    return Esyn
 
 # --- for inter-station
 def ESYN_RadiaTrans_intersta(mean_free: float, tm: float, r: float, c: float) -> float:
@@ -123,26 +121,22 @@ def ESYN_RadiaTrans_intersta(mean_free: float, tm: float, r: float, c: float) ->
     ----------------------------------------------
     """
     s0 = c**2 * tm**2 - r**2
-    if s0 > 0:
-        # first term
-        a1up = math.exp(-1 * c * tm * (mean_free ** (-1)))
-        a1bot = 2 * math.pi * c * r
-        first = (a1up / a1bot) * impulse(tm - r / c)
+    check_s0(s0)
 
-        # second term
-        ind2 = mean_free ** (-1) * (math.sqrt(s0) - c * tm)
-        a2up = math.exp(ind2)
-        a2bot = 2 * math.pi * mean_free * math.sqrt(s0)
-        second = (a2up / a2bot) * step(tm - r / c)
+    # first term
+    a1up = math.exp(-1 * c * tm * (mean_free ** (-1)))
+    a1bot = 2 * math.pi * c * r
+    first = (a1up / a1bot) * impulse(tm - r / c)
 
-        Esyn = first + second
+    # second term
+    ind2 = mean_free ** (-1) * (math.sqrt(s0) - c * tm)
+    a2up = math.exp(ind2)
+    a2bot = 2 * math.pi * mean_free * math.sqrt(s0)
+    second = (a2up / a2bot) * step(tm - r / c)
 
-        return Esyn
-    if s0 <= 0:
-        raise ValueError(
-            f"Considering the inter-station measurement, \
-                it is not sensible for the case of c**2 * tm**2 - r**2  == {s0} <=0."
-        )
+    Esyn = first + second
+
+    return Esyn
 
 
 ### -----
@@ -151,6 +145,13 @@ def convertTuple(tup: str) -> str:
     str = "".join(tup)
     return str
 
+### -----
+def check_s0(x: float) -> None:
+    if not (x > 0):
+        raise ValueError(
+            f"Invalid x: {x}. Considering the 2-D radiative transfer equation, \
+                it is not sensible for the case of c**2 * tm**2 - r**2  == {x} <=0. "
+        )
 
 ### -----
 def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -185,18 +186,19 @@ def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     npts = para["npts"]
     fmsv_mean = para["fmsv"]
 
-    Esyn_temp = np.ndarray((len(mfpx), len(intby), npts // 2 + 1))
+    Esyn_temp = np.ndarray((len(mfpx), len(intby), npts // 2 + 1),dtype=np.float64)
     Eobs_temp = np.ndarray((len(mfpx), len(intby), npts // 2 + 1))
     SSR_final = np.ndarray((len(mfpx), len(intby)))
     SSR_final[:][:] = 0.0
     for aa in range(fnum):
+        logger.info(f"--- file No. {aa} ---")
         r = float(vdist[aa])
         twindow = []
-        twindow = range(int(twinbe[aa][fb][0]), int(twinbe[aa][fb][1]), 1)
+        twindow = np.arange(int(twinbe[aa][fb][0]), int(twinbe[aa][fb][1]), dt)
         SSR_temppp = np.ndarray((len(mfpx), len(intby), len(twindow)))
 
         # grid search in combination of mean_free_path and intrinsic_b
-        Esyn_temp[:][:][:] = 0.0
+        Esyn_temp[:][:][:] = 10e-30
         Eobs_temp[:][:][:] = 0.0
 
         for nfree in range(len(mfpx)):
@@ -212,8 +214,8 @@ def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
                     Eobs_temp[nfree][nb][twn] = fmsv_mean[aa][fb + 1][twn]
 
                     s0 = c**2 * tm**2 - r**2
-                    if s0 < 0:
-                        # logger.warning(f"s0 {s0} <0")
+                    if s0 <= 0:
+                        # logger.warning(f"s0 {s0} <=0")
                         continue
 
                     tmp = ESYN_RadiaTrans_onesta(mean_free, tm, r, c)
@@ -223,10 +225,13 @@ def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
                 #### specific window --> find the scaling factor in the specific window
                 for tsn in range(len(twindow)):
                     tsb = int(twindow[tsn] // dt)
-                    SSR_temppp[nfree][nb][tsn] = 0.0
-                    SSR_temppp[nfree][nb][tsn] = math.log10(Eobs_temp[nfree][nb][tsb]) - math.log10(
-                        Esyn_temp[nfree][nb][tsb]
-                    )
+                    
+                    if (Esyn_temp[nfree][nb][tsb]==0): 
+                        logger.warning(f"Zero value of Esyn {Esyn_temp[nfree][nb][tsb]} at window {twindow[tsn]}, tsn {tsn}, tsb {tsb}, aa{aa} fb{fb}, nfree{nfree}, nb{nb}")
+                        continue
+                    else: 
+                        SSR_temppp[nfree][nb][tsn] = 0.0
+                        SSR_temppp[nfree][nb][tsn] = math.log10(Eobs_temp[nfree][nb][tsb]) - math.log10(Esyn_temp[nfree][nb][tsb])
 
                 crap = np.mean(SSR_temppp[nfree][nb])
                 Esyn_temp[nfree][nb] *= 10**crap  # scale the Esyn
@@ -243,7 +248,7 @@ def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
             # --- time comsuming for plotting out individual fitting curves
             # plot_fitting_curves(mean_free,y,fmsv_mean[aa][0][:],Eobs_temp[nfree],Esyn_temp[nfree],fname[aa],vdist[aa],twindow)
         # logger.info(f"mean_free: {mean_free}, intrinsic_b {intrinsic_b}, SSR:{SSR_temp}")
-        SSR_final = SSR_final / (np.min(SSR_final[:][:]))
+    SSR_final = SSR_final / (np.min(SSR_final[:][:]))
 
     return SSR_final, mfpx, intby
 
