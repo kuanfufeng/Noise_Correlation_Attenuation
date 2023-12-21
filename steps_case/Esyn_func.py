@@ -311,7 +311,7 @@ def get_optimal(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     result_mfp = np.take(xmin, 0)
 
     twindow = []
-    twindow = range(int(twinbe[aa][fb][0]), int(twinbe[aa][fb][1]), 1)
+    twindow = np.arange(int(twinbe[aa][fb][0]), int(twinbe[aa][fb][1]), dt)
 
     Eobs = np.ndarray((npts // 2 + 1))
     Esyn = np.ndarray((npts // 2 + 1))

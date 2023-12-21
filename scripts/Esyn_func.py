@@ -5,17 +5,17 @@ from typing import Tuple
 import numpy as np
 import pyasdf
 
-### -----
+# -----
 # These scripts are aim to perform the 2-D radiative transfer equation
 # for scalar waves (Shang and Gao 1988; Sato 1993),
 # assuming of isotropic scattering and source radiation in infinite medium
 # to calculate synthesized energy densities Esyn.
-### -----
+# -----
 
 logger = logging.getLogger(__name__)
 
 
-### -----
+# -----
 def read_pyasdf(sfile: str, ccomp: str) -> Tuple[float, float, np.ndarray, np.ndarray]:
     # useful parameters from each asdf file
     with pyasdf.ASDFDataSet(sfile, mode="r") as ds:
@@ -37,7 +37,7 @@ def read_pyasdf(sfile: str, ccomp: str) -> Tuple[float, float, np.ndarray, np.nd
             return None
 
 
-### -----
+# -----
 # Function that Calculate Mean Square
 def msValue(arr: np.ndarray) -> np.ndarray:
     """
@@ -59,7 +59,7 @@ def msValue(arr: np.ndarray) -> np.ndarray:
     return mean
 
 
-### -----
+# -----
 # Dirac delta function
 def impulse(x: float) -> float:
     return 1 * (x == 0)
@@ -102,6 +102,7 @@ def ESYN_RadiaTrans_onesta(mean_free: float, tm: float, r: float, c: float) -> f
 
     return Esyn
 
+
 # --- for inter-station
 def ESYN_RadiaTrans_intersta(mean_free: float, tm: float, r: float, c: float) -> float:
     """
@@ -139,13 +140,14 @@ def ESYN_RadiaTrans_intersta(mean_free: float, tm: float, r: float, c: float) ->
     return Esyn
 
 
-### -----
+# -----
 def convertTuple(tup: str) -> str:
     # initialize an empty string
     str = "".join(tup)
     return str
 
-### -----
+
+# -----
 def check_s0(x: float) -> None:
     if not (x > 0):
         raise ValueError(
@@ -153,7 +155,8 @@ def check_s0(x: float) -> None:
                 it is not sensible for the case of c**2 * tm**2 - r**2  == {x} <=0. "
         )
 
-### -----
+
+# -----
 def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     #  Calculate the sum of squared residuals (SSR) between Eobs and Esyn
@@ -236,8 +239,8 @@ def get_SSR(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
                 crap = np.mean(SSR_temppp[nfree][nb])
                 Esyn_temp[nfree][nb] *= 10**crap  # scale the Esyn
 
-                #### specific window
-                #### Calculate the SSR in the specific window
+                # --- specific window
+                # --- Calculate the SSR in the specific window
                 for tsn in range(len(twindow)):
                     tsb = int(twindow[tsn] // dt)
                     tse = int((twindow[tsn] + 1) // dt)
@@ -308,7 +311,7 @@ def get_optimal(fnum: int, para) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     result_mfp = np.take(xmin, 0)
 
     twindow = []
-    twindow = range(int(twinbe[aa][fb][0]), int(twinbe[aa][fb][1]), 1)
+    twindow = np.arange(int(twinbe[aa][fb][0]), int(twinbe[aa][fb][1]), dt)
 
     Eobs = np.ndarray((npts // 2 + 1))
     Esyn = np.ndarray((npts // 2 + 1))
@@ -349,6 +352,7 @@ def get_symmetric(msv: np.ndarray, indx: int) -> np.ndarray:
     sym = 0.5 * msv[indx:] + 0.5 * np.flip(msv[: indx + 1], axis=0)
     return sym
 
+
 # -----
 def get_smooth(data: np.ndarray, para) -> np.ndarray:
     """
@@ -376,15 +380,16 @@ def get_smooth(data: np.ndarray, para) -> np.ndarray:
     arr = np.zeros(int(npt))
     for jj in range(0, (npts)):
         if jj < half_npt:
-            arr = data[jj : jj + half_npt]
+            arr = data[jj: jj + half_npt]
         elif jj > (npts) - half_npt:
             arr = data[jj:npts]
         else:
-            arr = data[jj - half_npt : jj + half_npt]
+            arr = data[jj - half_npt: jj + half_npt]
         msv[jj] = msValue(arr)
     return msv
 
-### -----
+
+# -----
 def mad(arr):
     """
     From Noisepy-seis.noise_module
