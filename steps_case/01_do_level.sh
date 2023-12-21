@@ -13,5 +13,5 @@ do
 
   echo "python 01_level_determine.py $pdir $st $bdir"
     python 01_level_determine.py $pdir $st $bdir
-    mv  NOISE_LEVEL_${st}_*.txt LEVEL_$bdir
+    mv  NOISE_LEVEL_${st}.txt LEVEL_$bdir
 done

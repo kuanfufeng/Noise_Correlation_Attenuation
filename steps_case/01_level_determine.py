@@ -2,175 +2,156 @@
 import os 
 import sys
 import glob
-import shutil
-import obspy
 import numpy as np
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
 from Esyn_func import *
 from plotting import *
-import scipy
-import math
-
 from obspy.signal.filter import bandpass
 
 
-path=sys.argv[1] 
-sta_pair=sys.argv[2]
-boots=sys.argv[3]
+path = sys.argv[1]
+sta_pair = sys.argv[2]
 
 # compoent
-#comp_arr = ["ZN", "ZE","NE", "EN","EZ","NZ"]
-comp_arr = ["ZN_ave30-30", "ZE_ave30-30","NE_ave30-30", "EN_ave30-30","EZ_ave30-30","NZ_ave30-30"]
-num_cmp=len(comp_arr)
+# comp_arr = ["ZN", "ZE","NE", "EN","EZ","NZ"]
+comp_arr = ["ZN_ave30-30", "ZE_ave30-30", "NE_ave30-30", "EN_ave30-30",
+            "EZ_ave30-30", "NZ_ave30-30"]
+num_cmp = len(comp_arr)
 
-lag=60
-samp=20
-leng=int(lag*samp*2+1)
-npts=leng
-#print("\n# Lag-time (sec): ",lag,"\n# Sampling rate: ",samp,"\n# Data length (npts): ",leng)
+lag = 60
+samp = 20
+leng = int(lag*samp*2+1)
+npts = leng
+# print("\n# Lag-time (sec): ",lag,"\n
+# # Sampling rate: ",samp,"\n
+# # Data length (npts): ",leng)
 # targeted frequency band for waveform monitoring
-freq = [0.8, 1.2, 1.6, 2]  
-#freq = [0.4, 0.5, 0.8, 2]  
+freq = [0.8, 1.2, 1.6, 2]
+# freq = [0.4, 0.5, 0.8, 2]
 # smoothing window lengths corresponding to the frequency bands
-winlen=[2,2,2]   
-#winlen=[8,4,2]   
+winlen = [2, 2, 2]
+# winlen=[8,4,2]
 nfreq = len(freq) - 1
-#print("# Target Frequency Bands: ", freq)
-#print("# Smoothing window length: ", winlen)
+# print("# Target Frequency Bands: ", freq)
+# print("# Smoothing window length: ", winlen)
 
 # --- print results to file
-ffstr=str(freq[0])+"-"+str(freq[1])
-ftxt="NOISE_LEVEL_"+sta_pair+"_F"+ffstr+".txt"
+ftxt = "NOISE_LEVEL_"+sta_pair+".txt"
 f0 = open(ftxt, "a")
-ffstr=str(freq[1])+"-"+str(freq[2])
-ftxt="NOISE_LEVEL_"+sta_pair+"_F"+ffstr+".txt"
-f1 = open(ftxt, "a")
-ffstr=str(freq[2])+"-"+str(freq[3])
-ftxt="NOISE_LEVEL_"+sta_pair+"_F"+ffstr+".txt"
-f2 = open(ftxt, "a")
 
-line="ENV,Fband_(Hz),Noise_level,Amp(et),window_bt,window_et\n"
+line = "ENV,Fband_(Hz),Noise_level,Amp(et),window_bt,window_et,file_name\n"
 f0.write(line)
-f1.write(line)
-f2.write(line)
 
-evd=np.loadtxt("evtlst",dtype=str)
+evd = np.loadtxt("evtlst", dtype=str)
 for nev in range(len(evd)):
-    ev=evd[nev]
-    inpf=sta_pair+"_"+sta_pair+"_"+ev+"_ave30-30.h5"
-    sfiles=sorted(glob.glob(os.path.join(path, inpf)))
-    #print("# Read in file: ",sfiles,"\n # Station Pair: ",sta_pair)
-    
-    fnum=len(sfiles)
-    stackf=np.ndarray((fnum,num_cmp,2,leng))
-    #print("Array shape: ",stackf.shape)
-    vdist=np.zeros((fnum,1))  # S-R distance array
-    fname=[]                  # file name array
-    aa=0
+    ev = evd[nev]
+    inpf = sta_pair+"_"+sta_pair+"_"+ev+"_ave30-30.h5"
+    sfiles = sorted(glob.glob(os.path.join(path, inpf)))
+    # print("# Read in file: ",sfiles,"\n # Station Pair: ",sta_pair)
+    fnum = len(sfiles)
+    stackf = np.ndarray((fnum, num_cmp, 2, leng))
+    # print("Array shape: ",stackf.shape)
+    vdist = np.zeros((fnum, 1))  # S-R distance array
+    fname = []                  # file name array
+    aa = 0
     # loop through each station-pair
     for sfile in sfiles:
         if not os.path.exists(sfile):
-            continue 
-        ncmp=0
+            continue
+        ncmp = 0
         fname.append(sta_pair+"_"+ev)
         for ccomp in comp_arr:
-            #print(aa, sfile, ccomp)
+            # print(aa, sfile, ccomp)
             # read stacked waveforms
-            if ( read_pyasdf(sfile,ccomp) == None):
+            if (read_pyasdf(sfile, ccomp) == None):
                 continue
-            dist,dt, tvec,sdata = read_pyasdf(sfile,ccomp) # read waveform from pyasdf
-            stackf[aa][ncmp]=[tvec,sdata]
-            vdist[aa]=0 #dist
-            ncmp=ncmp+1
-        aa=aa+1
-    fnum=len(fname)
-    #print("# total files number: ",fnum)
-    if fnum == 0 :
+            # read waveform from pyasdf
+            dist, dt, tvec, sdata = read_pyasdf(sfile, ccomp)
+
+            stackf[aa][ncmp] = [tvec, sdata]
+            vdist[aa] = 0   # dist
+            ncmp = ncmp+1
+        aa = aa+1
+    fnum = len(fname)
+    # print("# total files number: ",fnum)
+    if fnum == 0:
         continue
     # --- filtering and mean-squared values
     indx = npts // 2                      # half-side number of points
-    MSE=np.ndarray((fnum,num_cmp,nfreq+1,npts)) # filtered two-side averaged stack CF
-
-    for aa in range (fnum):
-        dafbp=np.ndarray((nfreq,npts))
-
-        for ncmp in range (len(comp_arr)):
-            ccomp=comp_arr[ncmp]
-            #print(fname[aa],ccomp)
-
-            for fb in range(nfreq):
-                fmin=freq[fb]
-                fmax=freq[fb+1]
-                tt = np.arange(0, npts) * dt
-                data = stackf[aa][ncmp][1]
-                dafbp[fb] = bandpass(data, fmin, fmax, int(1 / dt), corners=4, zerophase=True)
-
-            MSE[aa][ncmp]=[stackf[aa][ncmp][0],dafbp[0],dafbp[1],dafbp[2]]
-           
-    # --- calculate average msv
-    msv=np.ndarray((fnum,num_cmp,nfreq+1,npts))
-    msv_mean=np.ndarray((fnum,nfreq+1,npts))
-    msv[:][:][:][:]=0.
-    msv_mean[:][:][:]=0.
-
-    data_sym=np.ndarray((nfreq,indx+1)) # two-side averaged stack CF
-    fmsv_mean=np.ndarray((fnum,nfreq+1,indx+1))
-    
-     # --- noise level
-    level=np.ndarray((fnum,nfreq,1))
-    twinbe=np.ndarray((fnum,nfreq,2))
+    MSE = np.ndarray((fnum, num_cmp, nfreq+1, npts))
+    # filtered two-side averaged stack CF
 
     for aa in range(fnum):
-        for ncmp in  range(len(comp_arr)):
-            ccomp=comp_arr[ncmp]
-            msv[aa][ncmp][0]=MSE[aa][ncmp][0][:]
+        dafbp = np.ndarray((nfreq, npts))
+
+        for ncmp in range(len(comp_arr)):
+            ccomp = comp_arr[ncmp]
+            # print(fname[aa],ccomp)
+
+            MSE[aa][ncmp][0] = stackf[aa][ncmp][0]
             for fb in range(nfreq):
-                data=MSE[aa][ncmp][fb+1][:]
-                fmin=freq[fb]
-                fmax=freq[fb+1]
+                fmin = freq[fb]
+                fmax = freq[fb+1]
+                tt = np.arange(0, npts) * dt
+                data = stackf[aa][ncmp][1]
+                dafbp[fb] = bandpass(data, fmin, fmax, int(1 / dt),
+                                     corners=4, zerophase=True)
+                MSE[aa][ncmp][fb+1] = dafbp[fb][:]
+
+    # --- calculate average msv
+    msv = np.zeros((fnum, num_cmp, nfreq+1, npts))
+    msv_mean = np.zeros((fnum, nfreq+1, npts))
+
+    data_sym = np.zeros((nfreq, indx+1))  # two-side averaged stack CF
+    fmsv_mean = np.zeros((fnum, nfreq+1, indx+1))
+
+    # --- noise level
+    level = np.ndarray((fnum, nfreq, 1))
+    twinbe = np.ndarray((fnum, nfreq, 2))
+
+    for aa in range(fnum):
+
+        for ncmp in range(len(comp_arr)):
+            ccomp = comp_arr[ncmp]
+            msv[aa][ncmp][0] = MSE[aa][ncmp][0][:]
+            for fb in range(nfreq):
+                data = MSE[aa][ncmp][fb+1][:]
+                fmin = freq[fb]
+                fmax = freq[fb+1]
 
                 # small window smoothing
-                npt=int(winlen[fb]/dt)+1
-                half_npt=int(npt/2)
-                arr=np.zeros(int(npt))
-                for jj in range(0, (npts)):
-                    if jj < half_npt:
-                        arr=data[jj: jj+half_npt]
-                    elif jj > (npts)-half_npt:
-                        arr=data[jj: npts]
-                    else:
-                        arr=data[jj-half_npt : jj+half_npt]
-                    msv[aa][ncmp][fb+1][jj] = msValue(arr,len(arr))
+                para = {'winlen': winlen[fb], 'dt': dt, 'npts': len(data)}
+                msv[aa][ncmp][fb+1] = get_smooth(data, para)
                 # self-normalized
-                msv[aa][ncmp][fb+1]=msv[aa][ncmp][fb+1]/np.max(msv[aa][ncmp][fb+1])  
+                msv[aa][ncmp][fb+1] = msv[aa][ncmp][fb+1]/np.max(msv[aa][ncmp][fb+1])
 
-        msv_mean[aa][0]=msv[aa][0][0][:]
+        msv_mean[aa][0] = msv[aa][0][0][:]
         for fb in range(nfreq):
-            fmin=freq[fb]
-            fmax=freq[fb+1]
+            fmin = freq[fb]
+            fmax = freq[fb+1]
+
             for ncmp in range(len(comp_arr)):
-                msv_mean[aa][fb+1]+=msv[aa][ncmp][fb+1][:]
-            msv_mean[aa][fb+1]=msv_mean[aa][fb+1]/len(comp_arr)
+                msv_mean[aa][fb+1] += msv[aa][ncmp][fb+1][:]
+            msv_mean[aa][fb+1] = msv_mean[aa][fb+1]/len(comp_arr)
             # --- fold
-            sym = 0.5 * msv_mean[aa][fb+1][indx:] + 0.5 * np.flip(msv_mean[aa][fb+1][: indx + 1], axis=0)
-            data_sym[fb]=sym
-            
-            twinbe[aa][fb][0]=(1/fmin)*4
-            twinbe[aa][fb][1]=twinbe[aa][fb][0]+(1/fmin)*3
-            ampend=sym[int(twinbe[aa][fb][1]/dt)]
+            sym = get_symmetric(msv_mean[aa][fb+1], indx)
+            data_sym[fb] = sym
+
+            twinbe[aa][fb][0] = (1/fmin)*4
+            twinbe[aa][fb][1] = twinbe[aa][fb][0]+(1/fmin)*3
+            ampend = sym[int(twinbe[aa][fb][1]/dt)]
             for pt in range(len(sym)):
                 if (sym[pt] < float(ampend)):
-                    level[aa][fb]=sym[pt]
+                    level[aa][fb] = sym[pt]
                     break
-            #print(fname[aa],"Fband_(Hz) %.1f-%.1f"%(fmin,fmax),"noise_level %.6f "%level[aa][fb],"ampend %.6f"%ampend, "coda_window %.1f %.1f "%(twinbe[aa][fb][0],twinbe[aa][fb][1]) )
-            line=str(ev)+",%.1f-%.1f"%(fmin,fmax)+",%.6f"%level[aa][fb]+",%.6f"%ampend+",%.1f,%.1f "%(twinbe[aa][fb][0],twinbe[aa][fb][1])+"\n"
-            
-            if (fb==0): f0.write(line)
-            elif (fb==1): f1.write(line)
-            elif (fb==2): f2.write(line)
+            # print(fname[aa],"Fband_(Hz) %.1f-%.1f"%(fmin,fmax),"noise_level %.6f"%level[aa][fb],"ampend %.6f"%ampend, "coda_window %.1f %.1f "%(twinbe[aa][fb][0],twinbe[aa][fb][1]) )
+            line = str(ev)+",%.1f-%.1f" % (fmin,fmax) \
+                + ",%.6f" % (level[aa][fb]) \
+                + ",%.6f" % (ampend) \
+                + ",%.2f,%.2f" % (twinbe[aa][fb][0],twinbe[aa][fb][1]) \
+                + ",%s" % sfiles[aa]+"\n"
+            # print(line)
+            f0.write(line)
+
 
 # Closing the opened file
 f0.close()
-f1.close()
-f2.close()
