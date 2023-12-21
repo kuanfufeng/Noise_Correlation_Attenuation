@@ -7,27 +7,28 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib import gridspec
 
-noisefn=sys.argv[1]  #"WINDOW_ave30-30_2wvl-QT5_HF/"
-sta=sys.argv[2]
-fblst=sys.argv[3]
+noisefn = sys.argv[1]
+sta = sys.argv[2]
+fblst = sys.argv[3]
 
 
-freq=np.loadtxt(fblst,dtype=str)
-flen=len(freq)
+freq = np.loadtxt(fblst, dtype=str)
+flen = len(freq)
 
-ftxt=noisefn
+ftxt = noisefn
 fi = pd.read_csv(ftxt)
 
 # --- print results to file
-ftxt2="ENDTIME_QT5_"+sta+".txt"
-f2=open(ftxt2, "w")
-line="stan,freq,tbeg,tend\n"
+ftxt2 = "ENDTIME_QT5_"+sta+".txt"
+f2 = open(ftxt2, "w")
+line = "stan,freq,tbeg,tend\n"
 f2.write(line)
 
 plt.tight_layout()
-fig2 = plt.figure(constrained_layout=True,figsize=(10,30))
+fig2 = plt.figure(constrained_layout=True, figsize=(10, 30))
 gs = gridspec.GridSpec(nrows=int(flen), ncols=2, width_ratios=[2, 1],
-                    height_ratios=np.linspace(1,1, num=flen).tolist(), figure=fig2)
+                    height_ratios=np.linspace(1, 1, num=flen).tolist(),
+                    figure=fig2)
 
 
 for k in range(flen):
@@ -40,7 +41,8 @@ for k in range(flen):
     bt = pdk['window_bt'].tolist()
     et = pdk['window_et'].tolist()
 
-    t = [datetime.datetime.strptime(d,'%Y%m%d').strftime('%Y-%m-%d') for d in dtime]
+    t = [datetime.datetime.strptime(d, '%Y%m%d').strftime('%Y-%m-%d')
+         for d in dtime]
     t0 = pd.to_datetime(t)
     QT1 = 0.01
     QT5 = 0.05
@@ -51,15 +53,16 @@ for k in range(flen):
     f2.write(str(line))
 
     # plot to one figure
-    f2_ax0 = fig2.add_subplot(gs[k,0])
+    f2_ax0 = fig2.add_subplot(gs[k, 0])
     f2_ax0.set_xlim(np.datetime64('2006-01-01'), np.datetime64('2022-12-31'))
     f2_ax0.plot(np.array(t0), np.array(et), ls="-", c='blue', linewidth=0.5)
     f2_ax0.plot(np.array(t0), np.array(et), ls="", marker='.', c='blue')
     f2_ax0.plot([t0[0], t0[-1]], [QTV5_F0, QTV5_F0], '-', c='k',
                 label="End time")
-    f2_ax0.plot([t0[0], t0[-1]], [np.min(bt),np.min(bt)], '-', c='green',
+    f2_ax0.plot([t0[0], t0[-1]], [np.min(bt), np.min(bt)], '-', c='green',
                 label="Begin time")
-    f2_ax0.set_title('Window endtime of '+sta+' (quantile 0.05 of noise level)')
+    f2_ax0.set_title('Window endtime of '+sta
+                     + ' (quantile 0.05 of noise level)')
     f2_ax0.set_ylabel('Window endtime (sec)')
     f2_ax0.set_xlabel('Time')
     f2_ax0.grid(True)
