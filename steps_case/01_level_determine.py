@@ -25,10 +25,8 @@ npts = leng
 # # Sampling rate: ",samp,"\n
 # # Data length (npts): ",leng)
 # targeted frequency band for waveform monitoring
-freq = [0.8, 1.2, 1.6, 2]
-# freq = [0.4, 0.5, 0.8, 2]
-# smoothing window lengths corresponding to the frequency bands
-winlen = [2, 2, 2]
+freq = [0.4, 0.5, 0.6, 0.8, 1, 1.2, 1.6, 2, 4, 6, 8]
+winlen = [8, 8, 6, 4, 4, 2, 2, 2, 1, 1]
 # winlen=[8,4,2]
 nfreq = len(freq) - 1
 # print("# Target Frequency Bands: ", freq)
@@ -36,7 +34,7 @@ nfreq = len(freq) - 1
 
 # --- print results to file
 ftxt = "NOISE_LEVEL_"+sta_pair+".txt"
-f0 = open(ftxt, "a")
+f0 = open(ftxt, "w")
 
 line = "ENV,Fband_(Hz),Noise_level,Amp(et),window_bt,window_et,file_name\n"
 f0.write(line)

@@ -61,8 +61,8 @@ for k in range(flen):
                 label="End time")
     f2_ax0.plot([t0[0], t0[-1]], [np.min(bt), np.min(bt)], '-', c='green',
                 label="Begin time")
-    f2_ax0.set_title('Window endtime of '+sta
-                     + ' (quantile 0.05 of noise level)')
+    f2_ax0.set_title('Window endtime of '+sta+' in ' + ff +
+                     'Hz\nquantile 0.05 of noise level)')
     f2_ax0.set_ylabel('Window endtime (sec)')
     f2_ax0.set_xlabel('Time')
     f2_ax0.grid(True)
@@ -80,7 +80,7 @@ for k in range(flen):
 
     f2_ax0.legend(loc='upper right')
     f2_ax1.legend(loc='upper right')
-    plt.title('Window endtime of '+sta+' \n(quantile 0.05 of noise level)')
+    plt.title('Window endtime of '+sta+' in '+ff+'Hz\n(quantile 0.05 of noise level)')
     plt.xlabel('Count')
 
 plt.savefig('WindowEndtime_'+sta+'.png')

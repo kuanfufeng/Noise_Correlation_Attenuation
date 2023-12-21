@@ -94,14 +94,14 @@ for nev in range(len(evd)):
         for ncmp in range(len(comp_arr)):
             ccomp = comp_arr[ncmp]
             # print(fname[aa],ccomp)
-            MSE[aa][ncmp][0]=stackf[aa][ncmp][0]
+            MSE[aa][ncmp][0] = stackf[aa][ncmp][0]
             for fb in range(nfreq):
                 fmin = freq[fb]
                 fmax = freq[fb+1]
                 tt = np.arange(0, npts) * dt
                 data = stackf[aa][ncmp][1]
                 dafbp[fb] = bandpass(data, fmin, fmax, int(1 / dt),
-                                    corners=4, zerophase=True)
+                                     corners=4, zerophase=True)
                 MSE[aa][ncmp][fb+1] = dafbp[fb][:]
 
     # --- calculate average msv
